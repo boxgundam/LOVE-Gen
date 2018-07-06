@@ -1,0 +1,48 @@
+// Options
+// ---------
+// [folder]: string - Launch at file path
+// --watch - Relaunch on file change
+// --verbose - Console log file changes
+
+const fs = require('fs');
+const { spawn, exec } = require('child_process');
+let watchProcess = null;
+
+// Set watching
+let watch = process.argv.indexOf('--watch') > -1;
+if(watch) process.argv.splice(process.argv.indexOf('--watch'), 1);
+
+// Set verbose
+let verbose = process.argv.indexOf('--verbose') > -1;
+if(verbose) process.argv.splice(process.argv.indexOf('--verbose'), 1);
+
+let folder = process.argv[2] ? process.argv[2] : process.env.PWD
+
+// Run
+if(!watch) {
+    exec('Taskkill /IM love.exe /F', () => {
+        spawn('love', [folder,'--console']); 
+    });
+    return;
+}
+
+// Watch
+else {
+    let acceptingEvent = true;
+    watchProcess = spawn('love', [folder,'--console']);
+
+    fs.watch(folder, { recursive: true, encoding: 'utf8'}, (event, file) => {
+        if(!acceptingEvent) return;
+        acceptingEvent = false;
+        setTimeout(() => acceptingEvent = true, 1000);
+
+        if(verbose) {
+            let message = `${event} detected in ${file}`;
+            console.info(message[0].toUpperCase() + message.slice(1));
+        }
+
+        if(watchProcess) 
+            watchProcess.kill();
+        watchProcess = spawn('love', [folder,'--console']); 
+    });
+}
